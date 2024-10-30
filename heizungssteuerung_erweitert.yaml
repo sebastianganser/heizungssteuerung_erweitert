@@ -9,30 +9,30 @@ blueprint:
       description: Der Raum, der gesteuert werden soll
       selector:
         entity:
-          domain: zone
+          integration: zone
     climate_entities:
       name: Thermostate im Raum
       description: Die zu steuernden Thermostate im ausgewählten Raum
       selector:
-        target:
-          entity:
-            domain: climate
+        entity:
+          domain: climate
+          multiple: true
     window_sensors:
       name: Fenstersensoren im Raum
       description: Sensoren, die erkennen, ob Fenster im Raum geöffnet sind
       selector:
-        target:
-          entity:
-            domain: binary_sensor
-            device_class: opening
+        entity:
+          domain: binary_sensor
+          device_class: opening
+          multiple: true
     door_sensors:
       name: Türsensoren im Raum
       description: Sensoren, die erkennen, ob Zimmertüren im Raum geöffnet sind
       selector:
-        target:
-          entity:
-            domain: binary_sensor
-            device_class: opening
+        entity:
+          domain: binary_sensor
+          device_class: opening
+          multiple: true
     weather_entity:
       name: Wettervorhersage
       description: Wetterentität, die für Heizungsentscheidungen berücksichtigt wird
@@ -43,10 +43,10 @@ blueprint:
       name: Raumtemperatursensoren
       description: Externe Raumtemperatursensoren zur Verbesserung der Genauigkeit
       selector:
-        target:
-          entity:
-            domain: sensor
-            device_class: temperature
+        entity:
+          domain: sensor
+          device_class: temperature
+          multiple: true
     target_temperature:
       name: Zieltemperatur
       description: Gewünschte Raumtemperatur
@@ -102,7 +102,7 @@ blueprint:
               entity_id: !input temperature_sensors
               below: !input target_temperature
             - condition: template
-              value_template: "{{ state_attr(!input.weather_entity, 'temperature') < 15 }}"
+              value_template: "{{ state_attr(input.weather_entity, 'temperature') < 15 }}"
           sequence:
             - service: climate.set_temperature
               target:
@@ -130,7 +130,7 @@ blueprint:
               target:
                 entity_id: !input climate_entities
               data:
-                temperature: "{{ state_attr(!input.temperature_sensors, 'state') }}"
+                temperature: "{{ state_attr(input.temperature_sensors, 'state') }}"
     - service: climate.turn_on
       target:
         entity_id: !input climate_entities
