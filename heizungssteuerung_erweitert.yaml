@@ -102,7 +102,7 @@ blueprint:
               entity_id: !input temperature_sensors
               below: !input target_temperature
             - condition: template
-              value_template: "{{ state_attr(input.weather_entity, 'temperature') | float < 15 }}"
+              value_template: "{{ state_attr('weather.' + weather_entity, 'temperature') | float < 15 }}"
           sequence:
             - service: climate.set_temperature
               target:
@@ -130,7 +130,7 @@ blueprint:
               target:
                 entity_id: !input climate_entities
               data:
-                temperature: "{{ states(input.temperature_sensors) | float }}"
+                temperature: "{{ states('sensor.' + temperature_sensors) | float }}"
     - service: climate.turn_on
       target:
         entity_id: !input climate_entities
