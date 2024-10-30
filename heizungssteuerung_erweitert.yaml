@@ -76,22 +76,22 @@ blueprint:
           unit_of_measurement: s
   trigger:
     - platform: state
-      entity_id: inputs.climate_entities
+      entity_id: !input climate_entities
       attribute: current_temperature
     - platform: state
-      entity_id: inputs.window_sensors
+      entity_id: !input window_sensors
     - platform: state
-      entity_id: inputs.door_sensors
+      entity_id: !input door_sensors
     - platform: state
-      entity_id: inputs.weather_entity
+      entity_id: !input weather_entity
   condition:
     - condition: state
-      entity_id: inputs.window_sensors
+      entity_id: !input window_sensors
       state: "off"
       for:
         minutes: 10
     - condition: state
-      entity_id: inputs.door_sensors
+      entity_id: !input door_sensors
       state: "off"
       for:
         minutes: 10
@@ -99,39 +99,39 @@ blueprint:
     - choose:
         - conditions:
             - condition: numeric_state
-              entity_id: inputs.temperature_sensors
-              below: inputs.target_temperature
+              entity_id: !input temperature_sensors
+              below: !input target_temperature
             - condition: template
-              value_template: "{{ state_attr(inputs.weather_entity, 'temperature') | float < 15 }}"
+              value_template: "{{ state_attr(input.weather_entity, 'temperature') | float < 15 }}"
           sequence:
             - service: climate.set_temperature
               target:
-                entity_id: inputs.climate_entities
+                entity_id: !input climate_entities
               data:
-                temperature: inputs.target_temperature
+                temperature: !input target_temperature
         - conditions:
             - condition: state
-              entity_id: inputs.window_sensors
+              entity_id: !input window_sensors
               state: "on"
           sequence:
             - delay:
-                seconds: inputs.window_open_delay
+                seconds: !input window_open_delay
             - service: climate.turn_off
               target:
-                entity_id: inputs.climate_entities
+                entity_id: !input climate_entities
         - conditions:
             - condition: state
-              entity_id: inputs.door_sensors
+              entity_id: !input door_sensors
               state: "on"
           sequence:
             - delay:
-                seconds: inputs.door_open_delay
+                seconds: !input door_open_delay
             - service: climate.set_temperature
               target:
-                entity_id: inputs.climate_entities
+                entity_id: !input climate_entities
               data:
-                temperature: "{{ states(inputs.temperature_sensors) | float }}"
+                temperature: "{{ states(input.temperature_sensors) | float }}"
     - service: climate.turn_on
       target:
-        entity_id: inputs.climate_entities
+        entity_id: !input climate_entities
   mode: restart
