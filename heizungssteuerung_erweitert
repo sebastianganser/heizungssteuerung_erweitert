@@ -1,0 +1,137 @@
+blueprint:
+  name: Heizungssteuerung Erweitert
+  description: >
+    Erweiterte Heizungssteuerung, die die Funktionalität von Better Thermostat nachahmt und Wetterdaten, Fenster-/Türsensoren sowie Raumkalibrierung berücksichtigt. Räume können definiert werden, sodass alle Thermostate und Sensoren innerhalb eines Raumes gemeinsam gesteuert werden.
+  domain: automation
+  input:
+    room:
+      name: Raum
+      description: Der Raum, der gesteuert werden soll
+      selector:
+        entity:
+          domain: zone
+    climate_entities:
+      name: Thermostate im Raum
+      description: Die zu steuernden Thermostate im ausgewählten Raum
+      selector:
+        target:
+          entity:
+            domain: climate
+    window_sensors:
+      name: Fenstersensoren im Raum
+      description: Sensoren, die erkennen, ob Fenster im Raum geöffnet sind
+      selector:
+        target:
+          entity:
+            domain: binary_sensor
+            device_class: opening
+    door_sensors:
+      name: Türsensoren im Raum
+      description: Sensoren, die erkennen, ob Zimmertüren im Raum geöffnet sind
+      selector:
+        target:
+          entity:
+            domain: binary_sensor
+            device_class: opening
+    weather_entity:
+      name: Wettervorhersage
+      description: Wetterentität, die für Heizungsentscheidungen berücksichtigt wird
+      selector:
+        entity:
+          domain: weather
+    temperature_sensors:
+      name: Raumtemperatursensoren
+      description: Externe Raumtemperatursensoren zur Verbesserung der Genauigkeit
+      selector:
+        target:
+          entity:
+            domain: sensor
+            device_class: temperature
+    target_temperature:
+      name: Zieltemperatur
+      description: Gewünschte Raumtemperatur
+      default: 21
+      selector:
+        number:
+          min: 10
+          max: 30
+          unit_of_measurement: °C
+    window_open_delay:
+      name: Fenster offen - Verzögerung (Sekunden)
+      description: Zeit in Sekunden, nach der die Thermostate ausgeschaltet werden, wenn ein Fenster geöffnet wird
+      default: 30
+      selector:
+        number:
+          min: 10
+          max: 300
+          unit_of_measurement: s
+    door_open_delay:
+      name: Tür offen - Anpassung (Sekunden)
+      description: Zeit in Sekunden, nach der die Temperatur auf die des angrenzenden Raumes angepasst wird, wenn eine Tür geöffnet wird
+      default: 30
+      selector:
+        number:
+          min: 10
+          max: 300
+          unit_of_measurement: s
+  trigger:
+    - platform: state
+      entity_id: !input climate_entities
+      attribute: current_temperature
+    - platform: state
+      entity_id: !input window_sensors
+    - platform: state
+      entity_id: !input door_sensors
+    - platform: state
+      entity_id: !input weather_entity
+  condition:
+    - condition: state
+      entity_id: !input window_sensors
+      state: "off"
+      for:
+        minutes: 10
+    - condition: state
+      entity_id: !input door_sensors
+      state: "off"
+      for:
+        minutes: 10
+  action:
+    - choose:
+        - conditions:
+            - condition: numeric_state
+              entity_id: !input temperature_sensors
+              below: !input target_temperature
+            - condition: template
+              value_template: "{{ state_attr(!input.weather_entity, 'temperature') < 15 }}"
+          sequence:
+            - service: climate.set_temperature
+              target:
+                entity_id: !input climate_entities
+              data:
+                temperature: !input target_temperature
+        - conditions:
+            - condition: state
+              entity_id: !input window_sensors
+              state: "on"
+          sequence:
+            - delay:
+                seconds: !input window_open_delay
+            - service: climate.turn_off
+              target:
+                entity_id: !input climate_entities
+        - conditions:
+            - condition: state
+              entity_id: !input door_sensors
+              state: "on"
+          sequence:
+            - delay:
+                seconds: !input door_open_delay
+            - service: climate.set_temperature
+              target:
+                entity_id: !input climate_entities
+              data:
+                temperature: "{{ state_attr(!input.temperature_sensors, 'state') }}"
+    - service: climate.turn_on
+      target:
+        entity_id: !input climate_entities
+  mode: single
